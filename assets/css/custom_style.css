@@ -1,0 +1,9 @@
+	/* custom_style.css */
+.bank-module-table {
+    background-color: #f3f3f3;
+    border-collapse: collapse;
+}
+.bank-module-table th, .bank-module-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
