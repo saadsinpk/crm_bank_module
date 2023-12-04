@@ -55,7 +55,6 @@ class Transaction_model extends CI_Model {
 
         // Fetch the transactions
         $transactions = $this->db->get()->result_array();
-
         if (!is_admin()) {
             $new_permissions = array();
             foreach ($permissions as $permission) {
@@ -66,7 +65,7 @@ class Transaction_model extends CI_Model {
                     foreach ($new_permissions[$transaction['cash_id']] as $new_permission_key => $new_permission_value) {
                         if (isset($new_permission_value['permission_type']) && $new_permission_value['permission_type'] == 'view_global') {
                             $days_to_check = $new_permission_value['days'];
-                            if ($days_to_check != '') {
+                            if ($days_to_check != '' AND $days_to_check != 0) {
                                 $transactionDate = new DateTime($transaction['date']);
                                 $transactionDate->modify("+$days_to_check days");
                                 $currentDate = new DateTime();
@@ -79,7 +78,7 @@ class Transaction_model extends CI_Model {
                         }
                         if (isset($new_permission_value['permission_type']) && $new_permission_value['permission_type'] == 'view_own') {
                             $days_to_check = $new_permission_value['days'];
-                            if ($days_to_check != '') {
+                            if ($days_to_check != '' AND $days_to_check != 0) {
                                 $transactionDate = new DateTime($transaction['date']);
                                 $transactionDate->modify("+$days_to_check days");
                                 $currentDate = new DateTime();

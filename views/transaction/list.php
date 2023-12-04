@@ -17,14 +17,13 @@
 
                         <a href="<?php echo admin_url('bank_module/transaction/create'); ?>" class="btn btn-success mbot10">Add New Transaction</a>
                         <!-- Add Filter Form -->
-                        <form action="<?php echo admin_url('bank_module/transaction'); ?>" method="get">
                             <div class="row">
                                 <div class="col-md-3">
                                     <div class="form-group">
                                         <label for="department_id">Department</label>
                                         <select name="department_id" id="department_id" class="form-control">
                                             <?php foreach ($departments as $department): ?>
-                                                <option value="<?php echo $department['departmentid']; ?>" <?php echo (isset($_GET['department_id']) && $_GET['department_id'] == $department['departmentid']) ? 'selected' : ''; ?>>
+                                                <option value="<?php echo $department['departmentid']; ?>">
                                                     <?php echo $department['name']; ?>
                                                 </option>
                                             <?php endforeach; ?>
@@ -53,7 +52,6 @@
                                 </div>
                             </div>
 
-                        </form>
 
                         <!-- Existing table and other code... -->
                         <div class="table-responsive"> <!-- Add this div -->
@@ -71,33 +69,6 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php //$balance = 0;?>
-                                    <?php foreach ($transactions as $transaction): ?>
-                                        <tr>
-                                            <td><?php echo date('d-m-Y', strtotime($transaction['date'])); ?></td>
-                                            <td><?php echo $transaction['name']; ?></td>
-                                            <td><?php echo $transaction['cash_name']; ?></td>
-                                            <?php if($transaction['transaction_type'] == 'Payment'){ ?>
-                                                <?php //$balance = $balance + $transaction['amount'];?>
-                                                <td><?php echo $transaction['amount']; ?></td>
-                                                <td></td>
-                                            <?php } else { ?>
-                                                <?php // $balance = $balance - $transaction['amount'];?>
-                                                <td></td>
-                                                <td><?php echo $transaction['amount']; ?></td>
-                                            <?php } ?>
-                                            <td><?php echo $transaction['balance']; ?></td>
-                                            <td></td>
-                                            <td>
-                                                <?php if($transaction['allow_edit'] == 1 || is_admin()) {?>
-                                                    <a href="<?php echo admin_url('bank_module/transaction/edit/' . $transaction['id']); ?>" class="btn btn-primary btn-sm">Edit</a>
-                                                <?php }?>
-                                                <?php if($transaction['allow_delete'] == 1 || is_admin()) {?>
-                                                    <a href="<?php echo admin_url('bank_module/transaction/delete/' . $transaction['id']); ?>" class="btn btn-danger btn-sm _delete">Delete</a>
-                                                <?php }?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>
@@ -114,54 +85,48 @@ document.addEventListener('DOMContentLoaded', function() {
     var departmentSelect = document.getElementById('department_id');
     var bankCashSelect = document.getElementById('bank_cash_id');
     var urlParams = new URLSearchParams(window.location.search);
-    
+
     var selectedDepartmentId = urlParams.get('department_id');
     var selectedBankCashId = urlParams.get('bank_cash_id');
 
-    if (selectedDepartmentId) {
-        // If department_id is in the URL, set it and update bank cash dropdown
+    // Function to update bank cash dropdown
+    function updateBankCashDropdown(departmentId, selectedBankCashId = null) {
+        bankCashSelect.innerHTML = '';
+        fetch('<?php echo admin_url('bank_module/transaction/get_bank_cash_by_department_view/'); ?>' + departmentId)
+            .then(response => response.json())
+            .then(bankCashes => {
+                bankCashes.forEach(function(bankCash, index) {
+                    var option = document.createElement('option');
+                    option.value = bankCash.id;
+                    option.textContent = bankCash.name;
+                    bankCashSelect.appendChild(option);
+
+                    if ((selectedBankCashId && bankCash.id == selectedBankCashId) || (!selectedBankCashId && index === 0)) {
+                        option.selected = true;
+                    }
+                });
+                if (bankCashes.length > 0 && selectedBankCashId === null) {
+                    fetchFilteredTransactions(); // Fetch transactions when auto-selecting the first bank cash
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    // Select the first department and update bank cash options if no department is selected
+    if (!selectedDepartmentId && departmentSelect.options.length > 1) {
+        departmentSelect.selectedIndex = 0; // Auto-select the first department
+        updateBankCashDropdown(departmentSelect.value);
+    } else if (selectedDepartmentId) {
         departmentSelect.value = selectedDepartmentId;
         updateBankCashDropdown(selectedDepartmentId, selectedBankCashId);
-    } else if (departmentSelect.options.length > 1) {
-        // If no department_id in URL, select the first department
-        departmentSelect.selectedIndex = 1;
-        selectedDepartmentId = departmentSelect.value;
-        updateBankCashDropdown(selectedDepartmentId);
     }
+
+    // Event listener for department change
+    departmentSelect.addEventListener('change', function() {
+        updateBankCashDropdown(this.value);
+    });
 });
 
-function updateBankCashDropdown(departmentId, selectedBankCashId) {
-    var bankCashSelect = document.getElementById('bank_cash_id');
-
-    fetch('<?php echo admin_url('bank_module/transaction/get_bank_cash_by_department_view/'); ?>' + departmentId)
-        .then(response => response.json())
-        .then(bankCashes => {
-            var isFirstOptionSet = false;
-
-            bankCashes.forEach(function(bankCash, index) {
-                var option = document.createElement('option');
-                option.value = bankCash.id;
-                option.textContent = bankCash.name;
-                bankCashSelect.appendChild(option);
-
-                if (selectedBankCashId && bankCash.id == selectedBankCashId) {
-                    option.selected = true;
-                    isFirstOptionSet = true;
-                } else if (selectedBankCashId === undefined && index === 0) {
-                    // Auto-select the first option only if no bank_cash_id is specified in the URL
-                    option.selected = true;
-                    isFirstOptionSet = true;
-                    fetchFilteredTransactions();
-                }
-            });
-
-            if (!isFirstOptionSet && selectedBankCashId === true) {
-                // Fallback to select first option if it's not already set
-                bankCashSelect.options[0].selected = true;
-            }
-        })
-        .catch(error => console.error('Error:', error));
-}
 
 
 
@@ -178,6 +143,8 @@ function fetchFilteredTransactions() {
     var bankCashId = document.getElementById('bank_cash_id').value;
     var filterDate = document.getElementById('filter_date').value;
     var search = document.getElementById('search').value;
+    console.log("bankCashId");
+    console.log(bankCashId);
 
     var url = new URL('<?php echo admin_url('bank_module/transaction/fetch_filtered_transactions'); ?>');
     var params = { department_id: departmentId, bank_cash_id: bankCashId, filter_date: filterDate, search: search };
